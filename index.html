@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Monitoramento de Internet</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h2>Latência (fping)</h2>
+    <canvas id="latencyChart" width="400" height="150"></canvas>
+
+    <h2>Velocidade (Speedtest)</h2>
+    <canvas id="speedChart" width="400" height="150"></canvas>
+
+    <script>
+    async function fetchData() {
+        try {
+            const latencyRes = await fetch('/latencia');
+            const latencyData = await latencyRes.json();
+
+            const speedRes = await fetch('/speed');
+            const speedData = await speedRes.json();
+
+            const ctx1 = document.getElementById('latencyChart').getContext('2d');
+            new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: latencyData.timestamps || [],
+                    datasets: [{
+                        label: 'Latência (ms)',
+                        data: latencyData.values || [],
+                        borderColor: 'blue',
+                        fill: false
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+
+            const ctx2 = document.getElementById('speedChart').getContext('2d');
+            new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: speedData.timestamps || [],
+                    datasets: [
+                        {
+                            label: 'Download (Mbps)',
+                            data: speedData.download || [],
+                            borderColor: 'green',
+                            fill: false
+                        },
+                        {
+                            label: 'Upload (Mbps)',
+                            data: speedData.upload || [],
+                            borderColor: 'orange',
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+
+        } catch (error) {
+            console.error("Erro ao carregar dados:", error);
+        }
+    }
+
+    fetchData();
+    </script>
+</body>
+</html>
