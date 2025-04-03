@@ -2,9 +2,21 @@ from flask import Flask, send_from_directory, jsonify
 import pandas as pd
 import os
 
-app = Flask(__name__)
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CONFIG_PATH = os.path.join(BASE_DIR, "config.local")
+
+# Carrega variáveis da config.local
+if os.path.exists(CONFIG_PATH):
+    with open(CONFIG_PATH) as f:
+        for line in f:
+            if not line.strip() or line.startswith("#"):
+                continue
+            key, val = line.strip().split("=", 1)
+            os.environ[key] = val
+
+PORTA = int(os.getenv("PORTA_SERVIDOR", "8080"))
+
+app = Flask(__name__)
 
 @app.route("/")
 def index():
@@ -36,4 +48,4 @@ def speed():
     })
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080)
+    app.run(host="0.0.0.0", port=PORTA)

@@ -30,6 +30,22 @@ run "sudo apt install -y fping python3-pip"
 log "Instalando speedtest-cli e Flask via pip"
 run "pip3 install --user speedtest-cli flask pandas matplotlib"
 
+log "Criando arquivo de configuração local exemplo (config.local.example)"
+cat << 'EOF' | run "tee $MONITOR_DIR/config.local.example > /dev/null"
+# Porta do servidor Flask
+PORTA_SERVIDOR=8080
+
+# IP de destino para o fping
+IP_TESTE=8.8.8.8
+EOF
+
+# Copiar config.local caso ainda não exista
+CONFIG_LOCAL="$MONITOR_DIR/config.local"
+if [ ! -f "$CONFIG_LOCAL" ]; then
+  run "cp $MONITOR_DIR/config.local.example $CONFIG_LOCAL"
+  log "Arquivo config.local criado a partir do exemplo."
+fi
+
 log "Criando scripts de coleta"
 cat << 'EOF' | run "tee $MONITOR_DIR/coleta_fping.sh > /dev/null"
 #!/bin/bash

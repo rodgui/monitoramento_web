@@ -6,3 +6,8 @@ __pycache__/
 *.db
 *.sqlite
 *.DS_Store
+# Arquivos locais
+deploy_git.sh
+config.local
+.env
+*.log
