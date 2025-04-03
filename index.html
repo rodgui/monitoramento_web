@@ -7,36 +7,83 @@
 <body>
     <h2>Latência (fping)</h2>
     <canvas id="latencyChart" width="400" height="150"></canvas>
+    <p id="latencyStats"></p>
 
     <h2>Velocidade (Speedtest)</h2>
     <canvas id="speedChart" width="400" height="150"></canvas>
+    <p id="speedStatsDownload"></p>
+    <p id="speedStatsUpload"></p>
 
     <script>
+    function calcularEstatisticas(data) {
+        if (!data || data.length === 0) return {};
+        const sorted = [...data].sort((a, b) => a - b);
+        const sum = data.reduce((a, b) => a + b, 0);
+        const media = (sum / data.length).toFixed(2);
+        const mediana = sorted.length % 2 === 0 ?
+            ((sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2).toFixed(2) :
+            sorted[Math.floor(sorted.length / 2)].toFixed(2);
+        return {
+            min: Math.min(...data).toFixed(2),
+            max: Math.max(...data).toFixed(2),
+            media,
+            mediana
+        };
+    }
+
+    function calcularTendencia(data) {
+        const n = data.length;
+        const x = [...Array(n).keys()];
+        const sumX = x.reduce((a, b) => a + b, 0);
+        const sumY = data.reduce((a, b) => a + b, 0);
+        const sumXY = x.reduce((sum, xi, i) => sum + xi * data[i], 0);
+        const sumX2 = x.reduce((sum, xi) => sum + xi * xi, 0);
+        const m = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+        const b = (sumY - m * sumX) / n;
+        return x.map(xi => +(m * xi + b).toFixed(2));
+    }
+
     async function fetchData() {
         try {
             const latencyRes = await fetch('/latencia');
             const latencyData = await latencyRes.json();
-
             const speedRes = await fetch('/speed');
             const speedData = await speedRes.json();
+
+            const statsLat = calcularEstatisticas(latencyData.values);
+            document.getElementById("latencyStats").innerText =
+              `Mín: ${statsLat.min} ms | Máx: ${statsLat.max} ms | Média: ${statsLat.media} ms | Mediana: ${statsLat.mediana} ms`;
+
+            const statsDown = calcularEstatisticas(speedData.download);
+            const statsUp = calcularEstatisticas(speedData.upload);
+            document.getElementById("speedStatsDownload").innerText =
+              `Download - Mín: ${statsDown.min} Mbps | Máx: ${statsDown.max} Mbps | Média: ${statsDown.media} Mbps | Mediana: ${statsDown.mediana} Mbps`;
+            document.getElementById("speedStatsUpload").innerText =
+              `Upload - Mín: ${statsUp.min} Mbps | Máx: ${statsUp.max} Mbps | Média: ${statsUp.media} Mbps | Mediana: ${statsUp.mediana} Mbps`;
 
             const ctx1 = document.getElementById('latencyChart').getContext('2d');
             new Chart(ctx1, {
                 type: 'line',
                 data: {
                     labels: latencyData.timestamps || [],
-                    datasets: [{
-                        label: 'Latência (ms)',
-                        data: latencyData.values || [],
-                        borderColor: 'blue',
-                        fill: false
-                    }]
+                    datasets: [
+                        {
+                            label: 'Latência (ms)',
+                            data: latencyData.values || [],
+                            borderColor: 'blue',
+                            fill: false
+                        },
+                        {
+                            label: 'Tendência',
+                            data: calcularTendencia(latencyData.values),
+                            borderColor: 'gray',
+                            borderDash: [5, 5],
+                            pointRadius: 0,
+                            fill: false
+                        }
+                    ]
                 },
-                options: {
-                    scales: {
-                        y: { beginAtZero: true }
-                    }
-                }
+                options: { scales: { y: { beginAtZero: true } } }
             });
 
             const ctx2 = document.getElementById('speedChart').getContext('2d');
@@ -52,25 +99,36 @@
                             fill: false
                         },
                         {
+                            label: 'Tendência Download',
+                            data: calcularTendencia(speedData.download),
+                            borderColor: 'darkgreen',
+                            borderDash: [5, 5],
+                            pointRadius: 0,
+                            fill: false
+                        },
+                        {
                             label: 'Upload (Mbps)',
                             data: speedData.upload || [],
                             borderColor: 'orange',
                             fill: false
+                        },
+                        {
+                            label: 'Tendência Upload',
+                            data: calcularTendencia(speedData.upload),
+                            borderColor: 'darkorange',
+                            borderDash: [5, 5],
+                            pointRadius: 0,
+                            fill: false
                         }
                     ]
                 },
-                options: {
-                    scales: {
-                        y: { beginAtZero: true }
-                    }
-                }
+                options: { scales: { y: { beginAtZero: true } } }
             });
 
         } catch (error) {
             console.error("Erro ao carregar dados:", error);
         }
     }
-
     fetchData();
     </script>
 </body>
