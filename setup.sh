@@ -243,6 +243,38 @@ run "bash -c \"echo '0 * * * * /bin/bash $MONITOR_DIR/coleta_speedtest.sh' >> $C
 run "crontab $CRON_TEMP"
 run "rm $CRON_TEMP"
 
+log "Criando serviço systemd para iniciar app.py automaticamente no boot"
+
+SERVICE_PATH="/etc/systemd/system/monitoramento.service"
+PYTHON_BIN=$(which python3)
+
+SERVICE_CONTENT="[Unit]
+Description=Monitoramento de Internet (Flask)
+After=network.target
+
+[Service]
+User=$USER
+WorkingDirectory=$MONITOR_DIR
+ExecStart=$PYTHON_BIN $MONITOR_DIR/app.py
+Restart=always
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
+"
+
+if $DRY_RUN; then
+    echo "[dry-run] Criaria arquivo de serviço systemd:"
+    echo "$SERVICE_CONTENT"
+else
+    echo "$SERVICE_CONTENT" | sudo tee "$SERVICE_PATH" > /dev/null
+    sudo systemctl daemon-reexec
+    sudo systemctl daemon-reload
+    sudo systemctl enable monitoramento.service
+    sudo systemctl restart monitoramento.service
+    log "Serviço monitoramento.service habilitado e iniciado."
+fi
+
 log "✅ Setup concluído. Execute com:"
 echo "  cd ~/monitoramento && python3 app.py"
 
